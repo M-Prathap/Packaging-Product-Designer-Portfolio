@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>PARA Creative Origin</title>
+    <script>
+      (function () {
+        var base = location.pathname.replace(/\/[^/]*$/, "/");
+        if (!base.endsWith("/")) base += "/";
+        var target = base + "index.html" + location.search + location.hash;
+        location.replace(target);
+      })();
+    </script>
+  </head>
+  <body></body>
+</html>

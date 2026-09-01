@@ -1,0 +1,12 @@
+/manage    /manage/index.html   200
+/manage/*  /manage/index.html   200
+/packaging    /index.html   200
+/logo-branding    /index.html   200
+/brochure-catalogue    /index.html   200
+/invitation    /index.html   200
+/banners    /index.html   200
+/menu-card    /index.html   200
+/videos    /index.html   200
+/about    /index.html   200
+/contact    /index.html   200
+/work/*    /index.html   200

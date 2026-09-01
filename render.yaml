@@ -1,0 +1,47 @@
+# Render static site — PARA Creative Origin portfolio
+# Dashboard: https://dashboard.render.com/static/new
+# Connect repo → Render reads this file automatically.
+
+services:
+  - type: web
+    name: para-creative-origin
+    runtime: static
+    buildCommand: echo "Static site — no build step"
+    staticPublishPath: .
+    routes:
+      - type: rewrite
+        source: /manage
+        destination: /manage/index.html
+      - type: rewrite
+        source: /manage/*
+        destination: /manage/index.html
+      - type: rewrite
+        source: /packaging
+        destination: /index.html
+      - type: rewrite
+        source: /logo-branding
+        destination: /index.html
+      - type: rewrite
+        source: /brochure-catalogue
+        destination: /index.html
+      - type: rewrite
+        source: /invitation
+        destination: /index.html
+      - type: rewrite
+        source: /banners
+        destination: /index.html
+      - type: rewrite
+        source: /menu-card
+        destination: /index.html
+      - type: rewrite
+        source: /videos
+        destination: /index.html
+      - type: rewrite
+        source: /about
+        destination: /index.html
+      - type: rewrite
+        source: /contact
+        destination: /index.html
+      - type: rewrite
+        source: /work/*
+        destination: /index.html

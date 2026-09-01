@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>PARA Creative Origin</title>
+    <link rel="icon" href="/assets/images/para-logo.png" type="image/png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/assets/css/public.css" />
+  </head>
+  <body>
+    <a class="skip" href="#app">Skip to content</a>
+    <header class="site-header" id="site-header">
+      <a class="wordmark" id="wordmark" href="/" aria-label="PARA Creative Origin home">
+        <img
+          class="wordmark__logo"
+          id="wordmark-logo"
+          src="/assets/images/para-logo.png"
+          alt=""
+          width="44"
+          height="44"
+          decoding="async"
+        />
+        <span class="wordmark__text">
+          <span class="wordmark__name" id="wordmark-name">
+            <span class="wordmark__line wordmark__line--primary">PARA</span>
+            <span class="wordmark__line wordmark__line--secondary">Creative Origin</span>
+          </span>
+          <span class="wordmark__tagline">Packaging &amp; Branding Studio</span>
+        </span>
+      </a>
+      <div class="header-search">
+        <label class="sr-only" for="search-input">Search products</label>
+        <span class="header-search__icon" aria-hidden="true">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="7"></circle>
+            <path d="M20 20l-3.5-3.5"></path>
+          </svg>
+        </span>
+        <input type="search" id="search-input" placeholder="Search product" autocomplete="off" />
+      </div>
+      <div class="header-actions">
+        <a class="header-icon" href="/" aria-label="Home">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <path d="M4 10.5L12 4l8 6.5V20a1 1 0 0 1-1 1h-5v-6H10v6H5a1 1 0 0 1-1-1v-9.5z"></path>
+          </svg>
+        </a>
+        <a class="btn-accent" href="/about">Follow us</a>
+        <a class="btn-accent btn-accent--solid" href="/contact">Contact us</a>
+        <button class="nav-toggle" id="nav-toggle" type="button" aria-label="Open menu" aria-expanded="false" aria-controls="nav-overlay">
+          <span></span>
+        </button>
+      </div>
+    </header>
+    <div class="toolbar" id="toolbar">
+      <div class="toolbar__left">
+        <label class="toolbar__select">
+          <span class="toolbar__select-label">Choose Category</span>
+          <select id="category-filter" aria-label="Choose category">
+            <option value="">All categories</option>
+          </select>
+        </label>
+      </div>
+      <div class="toolbar__right">
+        <span class="toolbar__count" id="item-count">Showing 0 items</span>
+        <button class="toolbar__share" type="button" id="share-page">
+          <span>Share this page</span>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <circle cx="18" cy="5" r="3"></circle>
+            <circle cx="6" cy="12" r="3"></circle>
+            <circle cx="18" cy="19" r="3"></circle>
+            <path d="M8.6 13.5l6.8 3.9M15.4 6.6L8.6 10.5"></path>
+          </svg>
+        </button>
+      </div>
+    </div>
+    <div
+      class="nav-overlay"
+      id="nav-overlay"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Menu"
+      aria-hidden="true"
+      hidden
+    >
+      <button class="nav-overlay-close" id="overlay-close" type="button">Close</button>
+      <nav id="overlay-nav" aria-label="Mobile"></nav>
+    </div>
+    <main id="app"></main>
+    <div
+      class="lightbox"
+      id="gallery-lightbox"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Project gallery"
+      aria-hidden="true"
+      hidden
+    >
+      <div class="lightbox__backdrop" aria-hidden="true"></div>
+      <div class="lightbox__shell">
+        <header class="lightbox__header">
+          <div class="lightbox__meta">
+            <h2 class="lightbox__title"></h2>
+            <p class="lightbox__client"></p>
+          </div>
+          <div class="lightbox__tools">
+            <span class="lightbox__counter" aria-live="polite">1 / 5</span>
+            <button class="lightbox__close" type="button" aria-label="Close gallery">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                <path d="M6 6l12 12M18 6L6 18"></path>
+              </svg>
+            </button>
+          </div>
+        </header>
+
+        <div class="lightbox__body">
+          <div class="lightbox__stage">
+            <div class="lightbox__viewport" id="lightbox-viewport">
+              <div class="lightbox__viewport-inner">
+                <figure class="lightbox__figure is-active">
+                  <img class="lightbox__image" alt="" decoding="async" />
+                </figure>
+              </div>
+            </div>
+            <div class="lightbox__stage-fade" aria-hidden="true"></div>
+            <button class="lightbox__nav lightbox__prev" type="button" aria-label="Previous image">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                <path d="M14 6l-6 6 6 6"></path>
+              </svg>
+            </button>
+            <button class="lightbox__nav lightbox__next" type="button" aria-label="Next image">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                <path d="M10 6l6 6-6 6"></path>
+              </svg>
+            </button>
+          </div>
+
+          <div class="lightbox__filmstrip-wrap">
+            <div class="lightbox__filmstrip" role="tablist" aria-label="Project images"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <footer class="site-footer" id="site-footer">
+      <span id="footer-meta"></span>
+    </footer>
+    <script type="module" src="/assets/js/public.js"></script>
+  </body>
+</html>

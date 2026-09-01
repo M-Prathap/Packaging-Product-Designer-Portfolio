@@ -1,0 +1,16 @@
+{
+  "rewrites": [
+    { "source": "/manage", "destination": "/manage/index.html" },
+    { "source": "/manage/", "destination": "/manage/index.html" },
+    { "source": "/packaging", "destination": "/index.html" },
+    { "source": "/logo-branding", "destination": "/index.html" },
+    { "source": "/brochure-catalogue", "destination": "/index.html" },
+    { "source": "/invitation", "destination": "/index.html" },
+    { "source": "/banners", "destination": "/index.html" },
+    { "source": "/menu-card", "destination": "/index.html" },
+    { "source": "/videos", "destination": "/index.html" },
+    { "source": "/about", "destination": "/index.html" },
+    { "source": "/contact", "destination": "/index.html" },
+    { "source": "/work/:path*", "destination": "/index.html" }
+  ]
+}
