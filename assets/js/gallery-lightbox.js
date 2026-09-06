@@ -115,9 +115,6 @@ function vimeoId(url) {
       .map((slide, i) => {
         const isActive = i === index;
         if (slide.type === "video") {
-          const imgMarkup = slide.thumbSrc
-            ? `<img src="${escapeAttr(slide.thumbSrc)}" alt="" loading="lazy" decoding="async" />`
-            : "";
           return `
             <button
               type="button"
@@ -127,10 +124,8 @@ function vimeoId(url) {
               aria-selected="${isActive ? "true" : "false"}"
               aria-label="Video slide ${i + 1}"
             >
-              ${imgMarkup}
-              <div class="lightbox__thumb-play-overlay">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>
-              </div>
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>
+              <span class="lightbox__thumb-label">Video</span>
             </button>`;
         }
         return `
@@ -229,21 +224,20 @@ function vimeoId(url) {
       })
     );
     const imageSlides = resolvedImages.filter(Boolean);
-    const coverSrc = imageSlides.length ? imageSlides[0].src : "";
 
     let videoSlide = null;
     if (project.videoFileId) {
       const src = await resolveSrc(project.videoFileId);
       if (src) {
-        videoSlide = { type: "video", isFile: true, src, thumbSrc: coverSrc, alt: `${project.title} — video` };
+        videoSlide = { type: "video", isFile: true, src, alt: `${project.title} — video` };
       }
     } else if (project.videoUrl) {
       const yt = youtubeId(project.videoUrl);
       const vim = vimeoId(project.videoUrl);
       if (yt) {
-        videoSlide = { type: "video", isEmbed: true, src: `https://www.youtube.com/embed/${yt}`, thumbSrc: coverSrc, alt: `${project.title} — video` };
+        videoSlide = { type: "video", isEmbed: true, src: `https://www.youtube.com/embed/${yt}`, alt: `${project.title} — video` };
       } else if (vim) {
-        videoSlide = { type: "video", isEmbed: true, src: `https://player.vimeo.com/video/${vim}`, thumbSrc: coverSrc, alt: `${project.title} — video` };
+        videoSlide = { type: "video", isEmbed: true, src: `https://player.vimeo.com/video/${vim}`, alt: `${project.title} — video` };
       }
     }
 
