@@ -178,14 +178,16 @@ async function renderProjects() {
     .concat(cats.map((c) => `<option value="${c.id}" ${filter === c.id ? "selected" : ""}>${escapeHtml(c.name)}</option>`))
     .join("");
   const rows = await Promise.all(
-    list.map(async (p) => {
+    list.map(async (p, idx) => {
       const url = await src(p.coverImageId);
+      const sizeLabel = p.gridSize === "wide" ? "Wide (2 cols)" : p.gridSize === "tall" ? "Tall (2 rows)" : p.gridSize === "item" ? "Standard (1x1)" : "Auto";
       return `<tr>
         <td>${url ? `<img class="thumb" src="${url}" alt="" />` : ""}</td>
         <td>${escapeHtml(p.title)}</td>
         <td>${escapeHtml(p.client)}</td>
         <td>${escapeHtml(getCategory(p.categoryId)?.name || "")}</td>
         <td>${escapeHtml(p.year)}</td>
+        <td><span class="badge" style="background:rgba(255,255,255,0.06);color:var(--accent-bright);">${sizeLabel}</span></td>
         <td>${p.order}</td>
         <td><span class="badge ${p.status}">${p.status}</span></td>
         <td class="actions">
@@ -208,10 +210,10 @@ async function renderProjects() {
       <table>
         <thead>
           <tr>
-            <th></th><th>Title</th><th>Client</th><th>Category</th><th>Year</th><th>Order</th><th>Status</th><th></th>
+            <th></th><th>Title</th><th>Client</th><th>Category</th><th>Year</th><th>Grid Size</th><th>Order</th><th>Status</th><th></th>
           </tr>
         </thead>
-        <tbody>${rows.join("") || `<tr><td colspan="8">No projects.</td></tr>`}</tbody>
+        <tbody>${rows.join("") || `<tr><td colspan="9">No projects.</td></tr>`}</tbody>
       </table>
     </div>`,
     { active: "projects" }
@@ -281,6 +283,7 @@ function emptyProject() {
     client: "",
     categoryId: getCategories()[0].id,
     year: String(new Date().getFullYear()),
+    gridSize: "auto",
     description: "",
     overview: "",
     challenge: "",
@@ -358,6 +361,14 @@ async function renderEditor(id) {
       <label class="field">Display order
         <input name="order" type="number" value="${escapeAttr(project.order)}" />
       </label>
+      <label class="field full">Grid Layout Size (Website Masonry)
+        <select name="gridSize">
+          <option value="auto" ${project.gridSize === "auto" || !project.gridSize ? "selected" : ""}>Auto (Pattern: Standard / Wide / Tall)</option>
+          <option value="item" ${project.gridSize === "item" ? "selected" : ""}>Standard (1x1 square)</option>
+          <option value="wide" ${project.gridSize === "wide" ? "selected" : ""}>Wide (Spans 2 columns horizontal)</option>
+          <option value="tall" ${project.gridSize === "tall" ? "selected" : ""}>Tall (Spans 2 rows vertical)</option>
+        </select>
+      </label>
       <label class="field full">Short description
         <textarea name="description">${escapeHtml(project.description)}</textarea>
       </label>
@@ -415,6 +426,7 @@ async function renderEditor(id) {
       year: String(fd.get("year") || "").trim(),
       status: String(fd.get("status")),
       order: Number(fd.get("order")) || 0,
+      gridSize: String(fd.get("gridSize") || "auto"),
       description: String(fd.get("description") || ""),
       overview: String(fd.get("overview") || ""),
       challenge: String(fd.get("challenge") || ""),

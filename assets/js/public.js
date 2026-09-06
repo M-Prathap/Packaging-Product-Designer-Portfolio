@@ -257,7 +257,7 @@ async function renderGallery({ categorySlug = "", query = "" } = {}) {
   const cards = await Promise.all(
     list.map(async (p, i) => {
       const cover = await img(p.coverImageId, p.title, i > 3 ? 'loading="lazy"' : "");
-      const size = SIZE_PATTERN[i % SIZE_PATTERN.length];
+      const size = (p.gridSize && p.gridSize !== "auto") ? p.gridSize : SIZE_PATTERN[i % SIZE_PATTERN.length];
       const views = pseudoViews(p.id);
       const delay = Math.min(i * 0.045, 0.72);
       const hasVideo = Boolean(p.videoFileId || p.videoUrl);
