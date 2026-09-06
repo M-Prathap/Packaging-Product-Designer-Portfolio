@@ -489,7 +489,8 @@ function renderContact() {
     <div class="page-card page-card--wide">
       <h1>Contact us</h1>
       <p class="page-card__lead">Tell us about your product, pack, or print project.</p>
-      <form class="contact-form" id="contact-form">
+      <form class="contact-form" id="contact-form" action="https://api.web3forms.com/submit" method="POST">
+        <input type="hidden" name="access_key" value="b817f538-e644-45e8-99f1-9c103f1cdbf8">
         <label>Name
           <input name="name" type="text" required autocomplete="name" />
         </label>
@@ -505,20 +506,45 @@ function renderContact() {
         <label>Message
           <textarea name="message" required></textarea>
         </label>
-        <button class="btn-accent btn-accent--solid" type="submit">Send message</button>
+        <button class="btn-accent btn-accent--solid" type="submit" id="contact-submit">Send message</button>
       </form>
-      <p class="contact-note">Prototype form — messages stay in this browser. Email <a href="mailto:${escapeAttr(s.email)}">${escapeHtml(s.email)}</a> for a real reply.</p>
+      <p class="contact-note">Email <a href="mailto:${escapeAttr(s.email)}">${escapeHtml(s.email)}</a> for direct inquiries.</p>
     </div>`;
 
-  document.getElementById("contact-form").addEventListener("submit", (e) => {
+  const form = document.getElementById("contact-form");
+  form.addEventListener("submit", async (e) => {
     e.preventDefault();
-    const wrap = e.target.closest(".page-card");
-    wrap.innerHTML = `
-      <div class="form-success">
-        <h2>Received.</h2>
-        <p>Thank you. Use the email below if you need a real reply.</p>
-        <a class="btn-accent btn-accent--solid" href="mailto:${escapeAttr(s.email)}">${escapeHtml(s.email)}</a>
-      </div>`;
+    const btn = document.getElementById("contact-submit");
+    const originalText = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = "Sending...";
+
+    try {
+      const formData = new FormData(form);
+      const res = await fetch("https://api.web3forms.com/submit", {
+        method: "POST",
+        body: formData,
+      });
+      const data = await res.json();
+
+      if (data.success) {
+        const wrap = form.closest(".page-card");
+        wrap.innerHTML = `
+          <div class="form-success">
+            <h2>Message sent!</h2>
+            <p>Thank you for reaching out. We will get back to you soon.</p>
+            <a class="btn-accent btn-accent--solid" href="/">Back to gallery</a>
+          </div>`;
+      } else {
+        alert(data.message || "Something went wrong. Please try again.");
+        btn.disabled = false;
+        btn.textContent = originalText;
+      }
+    } catch (err) {
+      alert("Failed to send message. Please check your internet connection.");
+      btn.disabled = false;
+      btn.textContent = originalText;
+    }
   });
 }
 
