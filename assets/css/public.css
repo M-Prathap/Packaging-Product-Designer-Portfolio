@@ -122,8 +122,8 @@ textarea {
 .wordmark__logo {
   display: block;
   flex-shrink: 0;
-  height: 2.65rem;
-  width: 2.65rem;
+  height: 3.5rem;
+  width: 3.5rem;
   object-fit: contain;
   object-position: center;
   background: transparent;
