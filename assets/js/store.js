@@ -118,14 +118,36 @@ export async function initStore() {
 }
 
 export async function resetSeed() {
-  // Clear server data
-  try { await fetch("/api/reset", { method: "POST" }); } catch {}
+  memoryState = null;
+  try { localStorage.removeItem(STORAGE_KEY); } catch {}
+  
   // Clear local IDB
   const ids = await listMediaIdsLocal().catch(() => []);
   await Promise.all(ids.map((id) => deleteMediaLocal(id)));
-  // Rebuild seed
+
+  // Clear server uploads if API available
+  if (apiSupported) {
+    try { await fetch("/api/reset", { method: "POST" }); } catch {}
+  }
+
+  // Rebuild seed and persist directly to server & local storage
   const state = buildSeed();
-  persist(state);
+  memoryState = state;
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch {}
+
+  if (apiSupported) {
+    try {
+      await fetch("/api/state", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(state),
+      });
+    } catch (e) {
+      console.warn("[store] Failed to reset server state:", e);
+    }
+  }
+
+  notify();
   return state;
 }
 

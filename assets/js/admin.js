@@ -741,9 +741,12 @@ async function renderSettings() {
     const close = () => (host.innerHTML = "");
     document.getElementById("reset-no").addEventListener("click", close);
     document.getElementById("reset-yes").addEventListener("click", async () => {
+      const btn = document.getElementById("reset-yes");
+      btn.disabled = true;
+      btn.textContent = "Resetting...";
       await resetSeed();
       close();
-      render();
+      await render();
     });
     document.addEventListener("keydown", function esc(e) {
       if (e.key === "Escape") {
