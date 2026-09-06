@@ -517,14 +517,29 @@ async function renderEditor(id) {
     await refreshThumbs();
   }
 
-  document.getElementById("video-input").addEventListener("change", async (e) => {
+  document.getElementById("video-input")?.addEventListener("change", async (e) => {
     const files = e.target.files;
     if (!files?.length) return;
-    const refs = await uploadFiles(files);
-    project.videoFileId = refs[0];
-    Object.assign(project, readForm());
-    saveProject(project);
-    await renderEditor(project.id);
+    const input = e.target;
+    input.disabled = true;
+    const statusSpan = document.createElement("span");
+    statusSpan.style.cssText = "margin-left:0.5rem;color:var(--accent);font-size:0.8rem;font-weight:500;";
+    statusSpan.textContent = "Uploading video... Please wait.";
+    input.parentNode.appendChild(statusSpan);
+
+    try {
+      const refs = await uploadFiles(files);
+      if (refs?.length) {
+        project.videoFileId = refs[0];
+        Object.assign(project, readForm());
+        saveProject(project);
+        await renderEditor(project.id);
+      }
+    } catch (err) {
+      alert("Video upload failed: " + (err.message || "Unknown error"));
+      statusSpan.remove();
+      input.disabled = false;
+    }
   });
   document.getElementById("clear-video")?.addEventListener("click", async () => {
     project.videoFileId = "";

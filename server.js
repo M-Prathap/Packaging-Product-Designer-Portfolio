@@ -21,7 +21,7 @@ try {
 
 /* ── Middleware ────────────────────────────────────────────────────── */
 
-app.use(express.json({ limit: "10mb" }));
+app.use(express.json({ limit: "50mb" }));
 
 /* ── Multer (file uploads) ────────────────────────────────────────── */
 
@@ -33,7 +33,7 @@ const storage = multer.diskStorage({
     cb(null, name);
   },
 });
-const upload = multer({ storage, limits: { fileSize: 20 * 1024 * 1024 } });
+const upload = multer({ storage, limits: { fileSize: 500 * 1024 * 1024 } });
 
 /* ── API routes ───────────────────────────────────────────────────── */
 
@@ -57,14 +57,20 @@ app.put("/api/state", (req, res) => {
   }
 });
 
-// File upload
-app.post("/api/upload", upload.single("file"), (req, res) => {
-  if (!req.file) return res.status(400).json({ error: "No file provided" });
-  res.json({
-    filename: req.file.filename,
-    originalName: req.file.originalname,
-    mime: req.file.mimetype,
-    size: req.file.size,
+// File upload with error handling
+app.post("/api/upload", (req, res) => {
+  upload.single("file")(req, res, (err) => {
+    if (err) {
+      console.error("[upload error]", err);
+      return res.status(400).json({ error: err.message || "Upload failed" });
+    }
+    if (!req.file) return res.status(400).json({ error: "No file provided" });
+    res.json({
+      filename: req.file.filename,
+      originalName: req.file.originalname,
+      mime: req.file.mimetype,
+      size: req.file.size,
+    });
   });
 });
 

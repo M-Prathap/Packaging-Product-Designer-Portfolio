@@ -426,19 +426,26 @@ export async function uploadFiles(fileList) {
         const data = await res.json();
         refs.push(uploadRef(data.filename));
         continue;
+      } else {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || `Server error ${res.status}`);
       }
-    } catch {
-      console.warn("[store] Server upload failed, using IndexedDB fallback");
+    } catch (e) {
+      console.warn("[store] Server upload failed:", e.message);
+      // Fallback: store in IndexedDB if server API isn't handling it and file is < 50MB
+      if (file.size < 50 * 1024 * 1024) {
+        const id = uid("media");
+        await putMediaLocal({
+          id,
+          mime: file.type || "application/octet-stream",
+          blob: file,
+          name: file.name || id,
+        });
+        refs.push(idbRef(id));
+      } else {
+        throw e;
+      }
     }
-    // Fallback: store in IndexedDB
-    const id = uid("media");
-    await putMediaLocal({
-      id,
-      mime: file.type || "application/octet-stream",
-      blob: file,
-      name: file.name || id,
-    });
-    refs.push(idbRef(id));
   }
   notify();
   return refs;
