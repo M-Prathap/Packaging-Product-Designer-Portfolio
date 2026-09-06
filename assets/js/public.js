@@ -259,6 +259,7 @@ async function renderGallery({ categorySlug = "", query = "" } = {}) {
       const cover = await img(p.coverImageId, p.title, i > 3 ? 'loading="lazy"' : "");
       const size = SIZE_PATTERN[i % SIZE_PATTERN.length];
       const views = pseudoViews(p.id);
+      const delay = Math.min(i * 0.045, 0.72);
       const hasVideo = Boolean(p.videoFileId || p.videoUrl);
       const mediaCount = [...new Set([p.coverImageId, ...(p.imageIds || [])].filter(Boolean))].length + (hasVideo ? 1 : 0);
       const mediaLabel = hasVideo ? `${mediaCount} media` : `${mediaCount} images`;
