@@ -19,6 +19,7 @@ const objectUrls = new Map();
 let memoryState = null;
 let dbPromise = null;
 let saveTimer = null;
+let apiSupported = true;
 
 /* ── Utilities ──────────────────────────────────────────────────────── */
 
@@ -37,16 +38,21 @@ function notify() {
 /* ── API persistence (debounced) ────────────────────────────────────── */
 
 function persistToApi(state) {
+  if (!apiSupported) return;
   clearTimeout(saveTimer);
   saveTimer = setTimeout(async () => {
     try {
-      await fetch("/api/state", {
+      const res = await fetch("/api/state", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(state),
       });
+      if (res.status === 404) {
+        apiSupported = false;
+      }
     } catch (e) {
-      console.warn("[store] Failed to save to server:", e);
+      apiSupported = false;
+      console.warn("[store] Server sync paused (API unreachable)");
     }
   }, 300);
 }
@@ -80,19 +86,24 @@ export function getState() {
 
 export async function initStore() {
   // 1. Try the server API first (shared across all visitors)
-  try {
-    const res = await fetch("/api/state");
-    if (res.ok) {
-      const data = await res.json();
-      if (data && Array.isArray(data.projects) && data.projects.length > 0) {
-        memoryState = data;
-        try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); } catch {}
-        await openDb().catch(() => {});
-        return data;
+  if (apiSupported) {
+    try {
+      const res = await fetch("/api/state");
+      if (res.status === 404) {
+        apiSupported = false;
+      } else if (res.ok) {
+        const data = await res.json();
+        if (data && Array.isArray(data.projects) && data.projects.length > 0) {
+          memoryState = data;
+          try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); } catch {}
+          await openDb().catch(() => {});
+          return data;
+        }
       }
+    } catch {
+      apiSupported = false;
+      console.warn("[store] API not available, using local data");
     }
-  } catch {
-    console.warn("[store] API not available, using local data");
   }
 
   // 2. Fall back to localStorage / seed

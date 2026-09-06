@@ -8,11 +8,16 @@ const PORT = process.env.PORT || 3000;
 
 /* ── Data directories ─────────────────────────────────────────────── */
 
-const DATA_DIR = path.join(__dirname, "data");
+const isVercel = Boolean(process.env.VERCEL);
+const DATA_DIR = isVercel ? path.join("/tmp", "data") : path.join(__dirname, "data");
 const UPLOADS_DIR = path.join(DATA_DIR, "uploads");
 const STATE_FILE = path.join(DATA_DIR, "portfolio.json");
 
-fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+try {
+  fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+} catch (e) {
+  console.warn("Uploads directory creation note:", e.message);
+}
 
 /* ── Middleware ────────────────────────────────────────────────────── */
 
@@ -143,8 +148,12 @@ app.get("/work/*", (_req, res) =>
   res.sendFile(path.join(__dirname, "index.html"))
 );
 
-/* ── Start ─────────────────────────────────────────────────────────── */
+/* ── Export & Start ─────────────────────────────────────────────────── */
 
-app.listen(PORT, () => {
-  console.log(`✔ Portfolio server running → http://localhost:${PORT}`);
-});
+if (require.main === module) {
+  app.listen(PORT, () => {
+    console.log(`✔ Portfolio server running → http://localhost:${PORT}`);
+  });
+}
+
+module.exports = app;
