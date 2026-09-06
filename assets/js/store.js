@@ -1,6 +1,10 @@
 /**
- * Single source of truth for the portfolio prototype.
- * localStorage: ppd-portfolio  |  IndexedDB: ppd-media
+ * Single source of truth for the portfolio.
+ * Server-first: reads/writes portfolio state via /api/state
+ * and uploads media via /api/upload.
+ *
+ * Falls back to localStorage + IndexedDB when the API is unreachable
+ * (e.g. opening index.html directly from disk).
  */
 
 import { buildSeed } from "./seed.js";
@@ -14,6 +18,9 @@ export const CHANGE_EVENT = "ppd-change";
 const objectUrls = new Map();
 let memoryState = null;
 let dbPromise = null;
+let saveTimer = null;
+
+/* ── Utilities ──────────────────────────────────────────────────────── */
 
 export function uid(prefix = "id") {
   return `${prefix}-${crypto.randomUUID()}`;
@@ -27,9 +34,31 @@ function notify() {
   window.dispatchEvent(new CustomEvent(CHANGE_EVENT));
 }
 
+/* ── API persistence (debounced) ────────────────────────────────────── */
+
+function persistToApi(state) {
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(async () => {
+    try {
+      await fetch("/api/state", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(state),
+      });
+    } catch (e) {
+      console.warn("[store] Failed to save to server:", e);
+    }
+  }, 300);
+}
+
+/* ── State persistence ──────────────────────────────────────────────── */
+
 function persist(state) {
   memoryState = state;
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  } catch { /* quota exceeded or private mode */ }
+  persistToApi(state);
   notify();
 }
 
@@ -50,27 +79,59 @@ export function getState() {
 }
 
 export async function initStore() {
+  // 1. Try the server API first (shared across all visitors)
+  try {
+    const res = await fetch("/api/state");
+    if (res.ok) {
+      const data = await res.json();
+      if (data && Array.isArray(data.projects) && data.projects.length > 0) {
+        memoryState = data;
+        try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); } catch {}
+        await openDb().catch(() => {});
+        return data;
+      }
+    }
+  } catch {
+    console.warn("[store] API not available, using local data");
+  }
+
+  // 2. Fall back to localStorage / seed
   let state = getState();
   if (!state || !Array.isArray(state.projects) || state.projects.length === 0) {
     state = buildSeed();
-    persist(state);
   }
+  persist(state);
   memoryState = state;
-  await openDb();
+  await openDb().catch(() => {});
   return state;
 }
 
 export async function resetSeed() {
-  const ids = await listMediaIds();
-  await Promise.all(ids.map((id) => deleteMedia(id)));
+  // Clear server data
+  try { await fetch("/api/reset", { method: "POST" }); } catch {}
+  // Clear local IDB
+  const ids = await listMediaIdsLocal().catch(() => []);
+  await Promise.all(ids.map((id) => deleteMediaLocal(id)));
+  // Rebuild seed
   const state = buildSeed();
   persist(state);
   return state;
 }
 
+/* ── Settings ───────────────────────────────────────────────────────── */
+
 export function getSettings() {
   return getState().settings;
 }
+
+export function updateSettings(partial) {
+  const state = getState();
+  state.settings = { ...state.settings, ...partial };
+  persist(state);
+  return state.settings;
+}
+
+/* ── Categories ─────────────────────────────────────────────────────── */
 
 export function getCategories() {
   return getState().categories;
@@ -80,12 +141,7 @@ export function getCategory(idOrSlug) {
   return getCategories().find((c) => c.id === idOrSlug || c.slug === idOrSlug);
 }
 
-export function updateSettings(partial) {
-  const state = getState();
-  state.settings = { ...state.settings, ...partial };
-  persist(state);
-  return state.settings;
-}
+/* ── Projects ───────────────────────────────────────────────────────── */
 
 export function getProjects({ publishedOnly = false, categoryId = null } = {}) {
   let list = [...getState().projects];
@@ -131,6 +187,8 @@ export function countByCategory() {
   return counts;
 }
 
+/* ── IndexedDB (local fallback for media) ───────────────────────────── */
+
 function openDb() {
   if (dbPromise) return dbPromise;
   dbPromise = new Promise((resolve, reject) => {
@@ -147,12 +205,12 @@ function openDb() {
   return dbPromise;
 }
 
-function tx(storeName, mode) {
+function txStore(storeName, mode) {
   return openDb().then((db) => db.transaction(storeName, mode).objectStore(storeName));
 }
 
-export async function putMedia({ id, mime, blob, name }) {
-  const store = await tx(IDB_STORE, "readwrite");
+async function putMediaLocal({ id, mime, blob, name }) {
+  const store = await txStore(IDB_STORE, "readwrite");
   return new Promise((resolve, reject) => {
     const rec = { id, mime, blob, name };
     const req = store.put(rec);
@@ -161,8 +219,8 @@ export async function putMedia({ id, mime, blob, name }) {
   });
 }
 
-export async function getMedia(id) {
-  const store = await tx(IDB_STORE, "readonly");
+async function getMediaLocal(id) {
+  const store = await txStore(IDB_STORE, "readonly");
   return new Promise((resolve, reject) => {
     const req = store.get(id);
     req.onsuccess = () => resolve(req.result || null);
@@ -170,9 +228,9 @@ export async function getMedia(id) {
   });
 }
 
-export async function deleteMedia(id) {
+async function deleteMediaLocal(id) {
   revokeCached(id);
-  const store = await tx(IDB_STORE, "readwrite");
+  const store = await txStore(IDB_STORE, "readwrite");
   return new Promise((resolve, reject) => {
     const req = store.delete(id);
     req.onsuccess = () => resolve();
@@ -180,8 +238,8 @@ export async function deleteMedia(id) {
   });
 }
 
-export async function listMedia() {
-  const store = await tx(IDB_STORE, "readonly");
+async function listMediaLocal() {
+  const store = await txStore(IDB_STORE, "readonly");
   return new Promise((resolve, reject) => {
     const req = store.getAll();
     req.onsuccess = () => resolve(req.result || []);
@@ -189,10 +247,52 @@ export async function listMedia() {
   });
 }
 
-async function listMediaIds() {
-  const all = await listMedia().catch(() => []);
+async function listMediaIdsLocal() {
+  const all = await listMediaLocal().catch(() => []);
   return all.map((r) => r.id);
 }
+
+/* ── Public media API (server-first, IDB fallback) ──────────────────── */
+
+// Keep old putMedia/getMedia/deleteMedia names for backwards compat
+export const putMedia = putMediaLocal;
+export const getMedia = getMediaLocal;
+
+export async function deleteMedia(id, source = "server") {
+  if (source === "server") {
+    try {
+      await fetch(`/api/media/${encodeURIComponent(id)}`, { method: "DELETE" });
+    } catch (e) {
+      console.warn("[store] Failed to delete from server:", e);
+    }
+  } else {
+    await deleteMediaLocal(id);
+  }
+}
+
+export async function listMedia() {
+  const results = [];
+  // Server uploads
+  try {
+    const res = await fetch("/api/media");
+    if (res.ok) {
+      const files = await res.json();
+      results.push(...files.map((f) => ({ ...f, source: "server" })));
+    }
+  } catch {
+    // Server not available
+  }
+  // Local IDB (fallback / legacy)
+  try {
+    const idbFiles = await listMediaLocal();
+    results.push(...idbFiles.map((f) => ({ ...f, source: "idb" })));
+  } catch {
+    // IDB not available
+  }
+  return results;
+}
+
+/* ── Ref helpers ────────────────────────────────────────────────────── */
 
 export function staticRef(filename) {
   return `static:${filename}`;
@@ -200,6 +300,10 @@ export function staticRef(filename) {
 
 export function idbRef(id) {
   return `idb:${id}`;
+}
+
+export function uploadRef(filename) {
+  return `upload:${filename}`;
 }
 
 export function isStaticRef(ref) {
@@ -210,9 +314,14 @@ export function isIdbRef(ref) {
   return typeof ref === "string" && ref.startsWith("idb:");
 }
 
+export function isUploadRef(ref) {
+  return typeof ref === "string" && ref.startsWith("upload:");
+}
+
 export function refId(ref) {
   if (isIdbRef(ref)) return ref.slice(4);
   if (isStaticRef(ref)) return ref.slice(7);
+  if (isUploadRef(ref)) return ref.slice(7);
   return ref;
 }
 
@@ -231,10 +340,13 @@ function revokeCached(id) {
 export async function resolveSrc(ref) {
   if (!ref) return "";
   if (isStaticRef(ref)) return staticPath(ref.slice(7));
+  // Server uploads → simple URL path
+  if (isUploadRef(ref)) return `/api/media/${encodeURIComponent(ref.slice(7))}`;
+  // Legacy IDB refs → object URL from IndexedDB blob
   if (isIdbRef(ref)) {
     const id = ref.slice(4);
     if (objectUrls.has(id)) return objectUrls.get(id);
-    const rec = await getMedia(id);
+    const rec = await getMediaLocal(id).catch(() => null);
     if (!rec) return "";
     const url = URL.createObjectURL(rec.blob);
     objectUrls.set(id, url);
@@ -243,6 +355,8 @@ export async function resolveSrc(ref) {
   if (ref.startsWith("/assets/") || ref.startsWith("http")) return ref;
   return staticPath(ref);
 }
+
+/* ── Image compression ──────────────────────────────────────────────── */
 
 export function compressImage(file, maxEdge = 2400, quality = 0.85) {
   if (!file.type.startsWith("image/") || file.type === "image/svg+xml") {
@@ -285,13 +399,29 @@ export function compressImage(file, maxEdge = 2400, quality = 0.85) {
   });
 }
 
+/* ── File uploads (server-first, IDB fallback) ──────────────────────── */
+
 export async function uploadFiles(fileList) {
   const files = Array.from(fileList || []);
   const refs = [];
   for (const raw of files) {
     const file = raw.type.startsWith("image/") ? await compressImage(raw) : raw;
+    // Try server upload first
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await fetch("/api/upload", { method: "POST", body: formData });
+      if (res.ok) {
+        const data = await res.json();
+        refs.push(uploadRef(data.filename));
+        continue;
+      }
+    } catch {
+      console.warn("[store] Server upload failed, using IndexedDB fallback");
+    }
+    // Fallback: store in IndexedDB
     const id = uid("media");
-    await putMedia({
+    await putMediaLocal({
       id,
       mime: file.type || "application/octet-stream",
       blob: file,
@@ -302,6 +432,8 @@ export async function uploadFiles(fileList) {
   notify();
   return refs;
 }
+
+/* ── Ref analysis ───────────────────────────────────────────────────── */
 
 export function mediaUsage() {
   const used = new Map();
@@ -327,6 +459,8 @@ export function collectAllRefs() {
   }
   return [...refs];
 }
+
+/* ── Cross-tab sync ─────────────────────────────────────────────────── */
 
 window.addEventListener("storage", (e) => {
   if (e.key === STORAGE_KEY) {

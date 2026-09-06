@@ -591,21 +591,22 @@ async function renderCategories() {
 
 async function renderMedia() {
   const usage = mediaUsage();
-  const idb = await listMedia();
+  const allMedia = await listMedia();
   const staticSeen = new Set();
   const cards = [];
 
-  for (const rec of idb) {
-    const ref = `idb:${rec.id}`;
+  for (const rec of allMedia) {
+    const ref = rec.source === "server" ? `upload:${rec.id}` : `idb:${rec.id}`;
     const url = await src(ref);
     const used = usage.get(ref) || [];
     const names = used.map((p) => p.title).join(", ") || "Unassigned";
+    const label = rec.source === "server" ? "server" : "browser";
     cards.push(`
       <div class="media-card">
         ${url ? `<img src="${url}" alt="${escapeAttr(rec.name)}" />` : ""}
-        <div class="muted">${escapeHtml(rec.name)}</div>
+        <div class="muted">${escapeHtml(rec.name)} (${label})</div>
         <div>${escapeHtml(names)}</div>
-        <button class="btn btn-danger" data-media-del="${rec.id}">Delete file</button>
+        <button class="btn btn-danger" data-media-del="${rec.id}" data-media-source="${rec.source}">Delete file</button>
       </div>`);
   }
 
@@ -624,7 +625,7 @@ async function renderMedia() {
 
   root.innerHTML = shell(
     "Media",
-    `<p class="muted">Uploaded files live in this browser (IndexedDB). Seed photographs are static files in assets/images.</p>
+    `<p class="muted">Uploaded files are stored on the server. Seed photographs are static files in assets/images.</p>
      <div class="media-grid">${cards.join("") || "<p>No media yet.</p>"}</div>`,
     { active: "media" }
   );
@@ -632,7 +633,8 @@ async function renderMedia() {
   root.querySelectorAll("[data-media-del]").forEach((b) => {
     b.addEventListener("click", async () => {
       const id = b.getAttribute("data-media-del");
-      const ref = `idb:${id}`;
+      const source = b.getAttribute("data-media-source") || "server";
+      const ref = source === "server" ? `upload:${id}` : `idb:${id}`;
       const state = getState();
       for (const p of state.projects) {
         if (p.coverImageId === ref) p.coverImageId = "";
@@ -640,7 +642,7 @@ async function renderMedia() {
         if (p.videoFileId === ref) p.videoFileId = "";
       }
       persistState(state);
-      await deleteMedia(id);
+      await deleteMedia(id, source);
       render();
     });
   });
@@ -650,8 +652,7 @@ async function renderSettings() {
   const s = getSettings();
   root.innerHTML = shell(
     "Settings",
-    `
-    <p class="muted">Data is local to this browser and is not synced. Public pages read these fields on load.</p>
+    `<p class="muted">Data is saved on the server and visible to all visitors. Public pages read these fields on load.</p>
     <form id="settings-form" class="form-grid two">
       <label class="field">Designer name
         <input name="name" type="text" required value="${escapeAttr(s.name)}" />

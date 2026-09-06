@@ -1,13 +1,20 @@
-# Render static site — PARA Creative Origin portfolio
-# Dashboard: https://dashboard.render.com/static/new
+# Render web service — PARA Creative Origin portfolio
+# Dashboard: https://dashboard.render.com
 # Connect repo → Render reads this file automatically.
 
 services:
   - type: web
     name: para-creative-origin
-    runtime: static
-    buildCommand: echo "Static site — no build step"
-    staticPublishPath: .
+    runtime: node
+    buildCommand: npm install
+    startCommand: node server.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+    disk:
+      name: portfolio-data
+      mountPath: /opt/render/project/src/data
+      sizeGB: 1
     routes:
       - type: rewrite
         source: /manage

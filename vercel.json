@@ -1,5 +1,6 @@
 {
   "rewrites": [
+    { "source": "/api/:path*", "destination": "/api/:path*" },
     { "source": "/manage", "destination": "/manage/index.html" },
     { "source": "/manage/", "destination": "/manage/index.html" },
     { "source": "/packaging", "destination": "/index.html" },
