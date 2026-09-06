@@ -318,6 +318,7 @@ td {
   padding: 0.6rem 0.75rem;
   border-bottom: 1px solid var(--line);
   vertical-align: middle;
+  white-space: nowrap;
 }
 
 th {
@@ -328,16 +329,23 @@ th {
   font-weight: 500;
 }
 
+td:first-child {
+  width: 60px;
+  padding: 0.4rem 0.75rem;
+}
+
 td img.thumb {
   width: 52px;
   height: 36px;
   object-fit: cover;
   background: var(--bg);
+  display: block;
 }
 
 .actions {
   display: flex;
   gap: 0.35rem;
+  white-space: nowrap;
 }
 
 /* Forms */
