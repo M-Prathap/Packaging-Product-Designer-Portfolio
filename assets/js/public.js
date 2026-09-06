@@ -490,7 +490,7 @@ function renderContact() {
       <h1>Contact us</h1>
       <p class="page-card__lead">Tell us about your product, pack, or print project.</p>
       <form class="contact-form" id="contact-form" action="https://api.web3forms.com/submit" method="POST">
-        <input type="hidden" name="access_key" value="b817f538-e644-45e8-99f1-9c103f1cdbf8">
+        <input type="hidden" name="access_key" value="474672e2-5b76-45be-97dc-2f25fc2a2b54">
         <label>Name
           <input name="name" type="text" required autocomplete="name" />
         </label>
