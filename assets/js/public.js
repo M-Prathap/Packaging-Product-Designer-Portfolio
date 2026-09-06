@@ -259,8 +259,9 @@ async function renderGallery({ categorySlug = "", query = "" } = {}) {
       const cover = await img(p.coverImageId, p.title, i > 3 ? 'loading="lazy"' : "");
       const size = SIZE_PATTERN[i % SIZE_PATTERN.length];
       const views = pseudoViews(p.id);
-      const delay = Math.min(i * 0.045, 0.72);
-      const imageCount = [...new Set([p.coverImageId, ...(p.imageIds || [])].filter(Boolean))].length;
+      const hasVideo = Boolean(p.videoFileId || p.videoUrl);
+      const mediaCount = [...new Set([p.coverImageId, ...(p.imageIds || [])].filter(Boolean))].length + (hasVideo ? 1 : 0);
+      const mediaLabel = hasVideo ? `${mediaCount} media` : `${mediaCount} images`;
       return `
         <button type="button" class="grid-card grid-card--${size} grid-card--enter" data-project-id="${escapeAttr(p.id)}" style="--stagger:${delay}s" aria-label="Open ${escapeAttr(p.title)} gallery">
           <figure class="grid-card__media">${cover}</figure>
@@ -276,7 +277,7 @@ async function renderGallery({ categorySlug = "", query = "" } = {}) {
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>
                 ${views}
               </span>
-              <span class="grid-card__stat grid-card__count">${imageCount} images</span>
+              <span class="grid-card__stat grid-card__count">${mediaLabel}</span>
             </div>
           </div>
         </button>`;

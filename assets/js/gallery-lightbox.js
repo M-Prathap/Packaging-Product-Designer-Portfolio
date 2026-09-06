@@ -97,33 +97,67 @@ export function createGalleryLightbox(root, { onScrollLockChange } = {}) {
     });
   }
 
+function youtubeId(url) {
+  if (!url) return "";
+  const m = url.match(/(?:youtu\.be\/|v=|embed\/)([A-Za-z0-9_-]{6,})/);
+  return m ? m[1] : "";
+}
+
+function vimeoId(url) {
+  if (!url) return "";
+  const m = url.match(/vimeo\.com\/(?:video\/)?(\d+)/);
+  return m ? m[1] : "";
+}
+
   function renderFilmstrip() {
     if (!els.filmstrip) return;
     els.filmstrip.innerHTML = slides
-      .map(
-        (slide, i) => `
-      <button
-        type="button"
-        class="lightbox__thumb ${i === index ? "is-active" : ""}"
-        data-index="${i}"
-        role="tab"
-        aria-selected="${i === index ? "true" : "false"}"
-        aria-label="Image ${i + 1} of ${slides.length}"
-      >
-        <img src="${escapeAttr(slide.src)}" alt="" loading="lazy" decoding="async" />
-      </button>`
-      )
+      .map((slide, i) => {
+        const isActive = i === index;
+        if (slide.type === "video") {
+          return `
+            <button
+              type="button"
+              class="lightbox__thumb lightbox__thumb--video ${isActive ? "is-active" : ""}"
+              data-index="${i}"
+              role="tab"
+              aria-selected="${isActive ? "true" : "false"}"
+              aria-label="Video slide ${i + 1}"
+            >
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>
+              <span class="lightbox__thumb-label">Video</span>
+            </button>`;
+        }
+        return `
+          <button
+            type="button"
+            class="lightbox__thumb ${isActive ? "is-active" : ""}"
+            data-index="${i}"
+            role="tab"
+            aria-selected="${isActive ? "true" : "false"}"
+            aria-label="Image ${i + 1} of ${slides.length}"
+          >
+            <img src="${escapeAttr(slide.src)}" alt="" loading="lazy" decoding="async" />
+          </button>`;
+      })
       .join("");
   }
 
   async function renderSlide(i, { direction = 0, instant = false } = {}) {
-    if (!slides.length || !els.image) return;
+    if (!slides.length || !els.figure) return;
     const slide = slides[i];
     if (!slide) return;
 
-    const applyImage = () => {
-      els.image.src = slide.src;
-      els.image.alt = slide.alt;
+    const applySlide = () => {
+      if (slide.type === "video") {
+        if (slide.isFile) {
+          els.figure.innerHTML = `<video class="lightbox__video" controls src="${escapeAttr(slide.src)}" playsinline autoplay></video>`;
+        } else {
+          els.figure.innerHTML = `<iframe class="lightbox__video-iframe" src="${escapeAttr(slide.src)}" allow="autoplay; encrypted-media" allowfullscreen></iframe>`;
+        }
+      } else {
+        els.figure.innerHTML = `<img class="lightbox__image" src="${escapeAttr(slide.src)}" alt="${escapeAttr(slide.alt)}" decoding="async" />`;
+      }
       index = i;
       resetViewportScroll();
       updateCounter();
@@ -131,9 +165,9 @@ export function createGalleryLightbox(root, { onScrollLockChange } = {}) {
       updateFilmstripActive();
     };
 
-    if (instant || !els.image.src || window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    if (instant || window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
       els.figure.classList.remove("is-exit-left", "is-exit-right", "is-enter-left", "is-enter-right");
-      applyImage();
+      applySlide();
       els.figure.classList.add("is-active");
       requestAnimationFrame(scheduleScrollStateUpdate);
       return;
@@ -148,7 +182,7 @@ export function createGalleryLightbox(root, { onScrollLockChange } = {}) {
     els.figure.classList.add(exitClass);
 
     await wait(220);
-    applyImage();
+    applySlide();
     els.figure.classList.remove(exitClass);
     els.figure.classList.add(enterClass);
 
@@ -177,18 +211,37 @@ export function createGalleryLightbox(root, { onScrollLockChange } = {}) {
     project = nextProject;
     focusBefore = document.activeElement;
     const refs = getProjectImageRefs(project);
-    const resolved = await Promise.all(
+    const resolvedImages = await Promise.all(
       refs.map(async (ref, i) => {
         const src = await resolveSrc(ref);
         return src
           ? {
+              type: "image",
               src,
               alt: `${project.title} — image ${i + 1}`,
             }
           : null;
       })
     );
-    slides = resolved.filter(Boolean);
+    const imageSlides = resolvedImages.filter(Boolean);
+
+    let videoSlide = null;
+    if (project.videoFileId) {
+      const src = await resolveSrc(project.videoFileId);
+      if (src) {
+        videoSlide = { type: "video", isFile: true, src, alt: `${project.title} — video` };
+      }
+    } else if (project.videoUrl) {
+      const yt = youtubeId(project.videoUrl);
+      const vim = vimeoId(project.videoUrl);
+      if (yt) {
+        videoSlide = { type: "video", isEmbed: true, src: `https://www.youtube.com/embed/${yt}`, alt: `${project.title} — video` };
+      } else if (vim) {
+        videoSlide = { type: "video", isEmbed: true, src: `https://player.vimeo.com/video/${vim}`, alt: `${project.title} — video` };
+      }
+    }
+
+    slides = videoSlide ? [...imageSlides, videoSlide] : imageSlides;
     index = Math.min(Math.max(startIndex, 0), Math.max(slides.length - 1, 0));
 
     const cat = getCategory(project.categoryId);
@@ -217,9 +270,8 @@ export function createGalleryLightbox(root, { onScrollLockChange } = {}) {
     document.body.classList.remove("lightbox-open");
     unbindKeys();
     unbindTouch();
-    if (els.image) {
-      els.image.removeAttribute("src");
-      els.image.alt = "";
+    if (els.figure) {
+      els.figure.innerHTML = `<img class="lightbox__image" alt="" decoding="async" />`;
     }
     if (els.filmstrip) els.filmstrip.innerHTML = "";
     slides = [];

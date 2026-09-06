@@ -1260,6 +1260,40 @@ body.lightbox-open {
     0 0 0 1px rgba(184, 115, 51, 0.08);
 }
 
+.lightbox__video,
+.lightbox__video-iframe {
+  display: block;
+  width: 100%;
+  max-width: 960px;
+  aspect-ratio: 16 / 9;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: #000;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.55);
+  margin: 0 auto;
+}
+
+.lightbox__thumb--video {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: rgba(184, 115, 51, 0.18);
+  color: #fff;
+  gap: 0.2rem;
+}
+
+.lightbox__thumb--video svg {
+  color: var(--accent-bright);
+}
+
+.lightbox__thumb-label {
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
 .lightbox__nav {
   position: absolute;
   top: 50%;
