@@ -168,8 +168,6 @@ function buildFromSeedItem(row) {
 }
 
 export function buildSeed() {
-  const projects = SEED_ITEMS.map(buildFromSeedItem);
-
   return {
     settings: {
       name: "PARA Creative Origin",
@@ -181,6 +179,6 @@ export function buildSeed() {
       password: "atelier",
     },
     categories: CATEGORIES,
-    projects,
+    projects: [],
   };
 }

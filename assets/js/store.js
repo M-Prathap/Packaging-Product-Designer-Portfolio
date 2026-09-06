@@ -93,7 +93,7 @@ export async function initStore() {
         apiSupported = false;
       } else if (res.ok) {
         const data = await res.json();
-        if (data && Array.isArray(data.projects) && data.projects.length > 0) {
+        if (data && Array.isArray(data.projects)) {
           memoryState = data;
           try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); } catch {}
           await openDb().catch(() => {});
@@ -108,10 +108,10 @@ export async function initStore() {
 
   // 2. Fall back to localStorage / seed
   let state = getState();
-  if (!state || !Array.isArray(state.projects) || state.projects.length === 0) {
+  if (!state || !Array.isArray(state.projects)) {
     state = buildSeed();
+    persist(state);
   }
-  persist(state);
   memoryState = state;
   await openDb().catch(() => {});
   return state;
