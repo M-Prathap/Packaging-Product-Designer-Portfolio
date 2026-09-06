@@ -350,6 +350,7 @@ function revokeCached(id) {
 
 export async function resolveSrc(ref) {
   if (!ref) return "";
+  if (typeof ref === "string" && ref.startsWith("data:")) return ref;
   if (isStaticRef(ref)) return staticPath(ref.slice(7));
   // Server uploads → simple URL path
   if (isUploadRef(ref)) return `/api/media/${encodeURIComponent(ref.slice(7))}`;
@@ -369,7 +370,7 @@ export async function resolveSrc(ref) {
 
 /* ── Image compression ──────────────────────────────────────────────── */
 
-export function compressImage(file, maxEdge = 2400, quality = 0.85) {
+export function compressImage(file, maxEdge = 2000, quality = 0.82) {
   if (!file.type.startsWith("image/") || file.type === "image/svg+xml") {
     return Promise.resolve(file);
   }
@@ -410,40 +411,45 @@ export function compressImage(file, maxEdge = 2400, quality = 0.85) {
   });
 }
 
-/* ── File uploads (server-first, IDB fallback) ──────────────────────── */
+export function fileToDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = (err) => reject(err);
+    reader.readAsDataURL(file);
+  });
+}
+
+/* ── File uploads (Permanent Inline Data URL storage) ──────────────── */
 
 export async function uploadFiles(fileList) {
   const files = Array.from(fileList || []);
   const refs = [];
   for (const raw of files) {
-    const file = raw.type.startsWith("image/") ? await compressImage(raw) : raw;
-    // Try server upload first
-    try {
-      const formData = new FormData();
-      formData.append("file", file);
-      const res = await fetch("/api/upload", { method: "POST", body: formData });
-      if (res.ok) {
-        const data = await res.json();
-        refs.push(uploadRef(data.filename));
-        continue;
+    if (raw.type.startsWith("image/")) {
+      const compressed = await compressImage(raw, 2000, 0.82);
+      const dataUrl = await fileToDataUrl(compressed);
+      refs.push(dataUrl);
+    } else {
+      if (raw.size < 15 * 1024 * 1024) {
+        const dataUrl = await fileToDataUrl(raw);
+        refs.push(dataUrl);
       } else {
-        const errData = await res.json().catch(() => ({}));
-        throw new Error(errData.error || `Server error ${res.status}`);
-      }
-    } catch (e) {
-      console.warn("[store] Server upload failed:", e.message);
-      // Fallback: store in IndexedDB if server API isn't handling it and file is < 50MB
-      if (file.size < 50 * 1024 * 1024) {
-        const id = uid("media");
-        await putMediaLocal({
-          id,
-          mime: file.type || "application/octet-stream",
-          blob: file,
-          name: file.name || id,
-        });
-        refs.push(idbRef(id));
-      } else {
-        throw e;
+        try {
+          const formData = new FormData();
+          formData.append("file", raw);
+          const res = await fetch("/api/upload", { method: "POST", body: formData });
+          if (res.ok) {
+            const data = await res.json();
+            refs.push(uploadRef(data.filename));
+          } else {
+            const dataUrl = await fileToDataUrl(raw);
+            refs.push(dataUrl);
+          }
+        } catch {
+          const dataUrl = await fileToDataUrl(raw);
+          refs.push(dataUrl);
+        }
       }
     }
   }
