@@ -239,6 +239,42 @@ function filterProjects({ categorySlug = "", query = "" } = {}) {
   return list;
 }
 
+async function gridCardMedia(p, index) {
+  if (p.coverImageId) {
+    const src = await resolveSrc(p.coverImageId);
+    if (src) {
+      return `<img src="${src}" alt="${escapeAttr(p.title)}" ${index > 3 ? 'loading="lazy"' : ""} />`;
+    }
+  }
+
+  if (p.videoFileId) {
+    const videoSrc = await resolveSrc(p.videoFileId);
+    if (videoSrc) {
+      return `<video src="${videoSrc}" autoplay loop muted playsinline class="grid-card__video-preview"></video>`;
+    }
+  }
+
+  if (p.videoUrl) {
+    const yt = youtubeId(p.videoUrl);
+    if (yt) {
+      return `<img src="https://img.youtube.com/vi/${yt}/hqdefault.jpg" alt="${escapeAttr(p.title)}" />`;
+    }
+  }
+
+  if (Array.isArray(p.imageIds) && p.imageIds.length > 0) {
+    for (const ref of p.imageIds) {
+      const src = await resolveSrc(ref);
+      if (src) {
+        return `<img src="${src}" alt="${escapeAttr(p.title)}" ${index > 3 ? 'loading="lazy"' : ""} />`;
+      }
+    }
+  }
+
+  return `<div class="grid-card__placeholder">
+    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
+  </div>`;
+}
+
 async function renderGallery({ categorySlug = "", query = "" } = {}) {
   setChromeMode("gallery");
   populateCategoryFilter(categorySlug);
@@ -256,7 +292,7 @@ async function renderGallery({ categorySlug = "", query = "" } = {}) {
 
   const cards = await Promise.all(
     list.map(async (p, i) => {
-      const cover = await img(p.coverImageId, p.title, i > 3 ? 'loading="lazy"' : "");
+      const cover = await gridCardMedia(p, i);
       const size = (p.gridSize && p.gridSize !== "auto") ? p.gridSize : SIZE_PATTERN[i % SIZE_PATTERN.length];
       const views = pseudoViews(p.id);
       const delay = Math.min(i * 0.045, 0.72);
